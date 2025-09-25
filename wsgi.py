@@ -9,11 +9,7 @@ from App.controllers import ( create_user, get_all_users_json, get_all_users, in
 import json
 from datetime import datetime
 from flask.cli import AppGroup
-from App.models import Shift, Attendance  # optional: for lookups only
-
-
-
-# This commands file allow you to create convenient CLI commands for testing controllers
+from App.models import Shift, Attendance
 
 app = create_app()
 migrate = get_migrate(app)
@@ -28,12 +24,12 @@ def init():
 User Commands
 '''
 
-# Commands can be organized using groups
-
 # create a group, it would be the first argument of the comand
 # eg : flask user <command>
-user_cli = AppGroup('user', help='User object commands') 
-
+user_cli = AppGroup('user', help='User object commands')
+from datetime import date, time as dtime, timedelta
+from App.controllers import schedule_shift, schedule_week, get_roster, clock_in, clock_out, weekly_report
+ 
 # Then define the command and any parameters and annotate it with the group (@)
 @user_cli.command("create", help="Creates a user")
 @click.argument("username", default="rob")
@@ -74,9 +70,6 @@ def user_tests_command(type):
 app.cli.add_command(test)
 
 # wsgi.py (append near your other AppGroup commands)
-from datetime import date, time as dtime, timedelta
-from App.controllers import schedule_shift, schedule_week, get_roster, clock_in, clock_out, weekly_report
-
 @user_cli.command("week", help="Schedule a simple 9-5 week for a user (Mon-Fri)")
 @click.argument("username")
 @click.argument("week_start")  # YYYY-MM-DD (Monday)
@@ -199,6 +192,23 @@ app.cli.add_command(shift_cli)
 
 # ---- ATTENDANCE COMMANDS ----
 att_cli = AppGroup('att', help='Attendance (clock in/out) commands')
+
+@att_cli.command("seed", help="Create an empty attendance record for a shift (if missing)")
+@click.argument("username")
+@click.argument("shift_id", type=int)
+def att_seed(username, shift_id):
+    u = _find_user(username)
+    if not u: return
+    rec = Attendance.query.filter_by(shift_id=shift_id, user_id=u.id).first()
+    if rec:
+        print("Attendance already exists:")
+        _print_json(rec.get_json())
+        return
+    rec = Attendance(user_id=u.id, shift_id=shift_id)
+    db.session.add(rec)
+    db.session.commit()
+    print("Created attendance record:")
+    _print_json(rec.get_json())
 
 @att_cli.command("in", help="Clock IN now for a user on a shift by id")
 @click.argument("username")
