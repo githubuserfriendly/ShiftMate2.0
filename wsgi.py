@@ -1,15 +1,11 @@
-import click, pytest, sys
+import click, pytest, sys, json
 from flask.cli import with_appcontext, AppGroup
-
+from datetime import datetime, date, time as dtime, timedelta
 from App.database import db, get_migrate
-from App.models import User
+from App.models import User, Shift, Attendance
 from App.main import create_app
 from App.controllers import ( create_user, get_all_users_json, get_all_users, initialize )
-
-import json
-from datetime import datetime
-from flask.cli import AppGroup
-from App.models import Shift, Attendance
+from App.controllers import schedule_shift, schedule_week, get_roster, clock_in, clock_out, weekly_report
 
 app = create_app()
 migrate = get_migrate(app)
@@ -20,17 +16,20 @@ def init():
     initialize()
     print('Database Initialized!')
 
+# Groups: 
+# HOW TO USE GROUPS : flask <group> <command>
+user_cli = AppGroup('user', help='User object commands')
+test = AppGroup('test', help='Testing commands') 
+shift_cli = AppGroup('shift', help='Shift scheduling and roster commands')
+att_cli = AppGroup('att', help='Attendance (clock in/out) commands')
+report_cli = AppGroup('report', help='Reporting commands')
+
 '''
 User Commands
 '''
 
-# create a group, it would be the first argument of the comand
-# eg : flask user <command>
-user_cli = AppGroup('user', help='User object commands')
-from datetime import date, time as dtime, timedelta
-from App.controllers import schedule_shift, schedule_week, get_roster, clock_in, clock_out, weekly_report
- 
-# Then define the command and any parameters and annotate it with the group (@)
+# Creating a user:
+# This command will be : flask user create bob bobpass
 @user_cli.command("create", help="Creates a user")
 @click.argument("username", default="rob")
 @click.argument("password", default="robpass")
@@ -38,8 +37,7 @@ def create_user_command(username, password):
     create_user(username, password)
     print(f'{username} created!')
 
-# this command will be : flask user create bob bobpass
-
+# Generating List of all Users
 @user_cli.command("list", help="Lists users in the database")
 @click.argument("format", default="string")
 def list_user_command(format):
@@ -47,14 +45,12 @@ def list_user_command(format):
         print(get_all_users_json())
     else:
         print(get_all_users_json())
+app.cli.add_command(user_cli)
 
-app.cli.add_command(user_cli) # add the group to the cli
 
 '''
 Test Commands
 '''
-
-test = AppGroup('test', help='Testing commands') 
 
 @test.command("user", help="Run User tests")
 @click.argument("type", default="all")
@@ -65,11 +61,9 @@ def user_tests_command(type):
         sys.exit(pytest.main(["-k", "UserIntegrationTests"]))
     else:
         sys.exit(pytest.main(["-k", "App"]))
-    
-
 app.cli.add_command(test)
 
-# wsgi.py (append near your other AppGroup commands)
+
 @user_cli.command("week", help="Schedule a simple 9-5 week for a user (Mon-Fri)")
 @click.argument("username")
 @click.argument("week_start")  # YYYY-MM-DD (Monday)
@@ -85,7 +79,6 @@ def schedule_simple_week(username, week_start):
     created, skipped = result["created"], result["skipped"]
     print(f"Created {len(created)} shifts; Skipped (already existed) {len(skipped)}.")
 
-
 @test.command("roster", help="Print roster for a date range")
 @click.argument("start")
 @click.argument("end")
@@ -100,8 +93,6 @@ def print_report(week_start):
     rep = weekly_report(date.fromisoformat(week_start))
     print(rep)
 
-# ----- EXTRA DEV/TEST COMMANDS -----
-# Helper pretty-printer
 def _print_json(data):
     print(json.dumps(data, indent=2, default=str))
 
@@ -133,8 +124,6 @@ def _find_shift_id(username, work_date, start_str=None):
     return s.id
 
 # ---- SHIFT COMMANDS ----
-shift_cli = AppGroup('shift', help='Shift scheduling and roster commands')
-
 @shift_cli.command("add", help="Create a single shift for a user")
 @click.argument("username")
 @click.argument("work_date")   # YYYY-MM-DD
@@ -191,8 +180,6 @@ def shift_find(username, work_date):
 app.cli.add_command(shift_cli)
 
 # ---- ATTENDANCE COMMANDS ----
-att_cli = AppGroup('att', help='Attendance (clock in/out) commands')
-
 @att_cli.command("seed", help="Create an empty attendance record for a shift (if missing)")
 @click.argument("username")
 @click.argument("shift_id", type=int)
@@ -239,17 +226,12 @@ def att_status(username, shift_id):
         _print_json(rec.get_json())
     else:
         print("No attendance record found.")
-
 app.cli.add_command(att_cli)
 
 # ---- REPORT COMMANDS (prettier output) ----
-report_cli = AppGroup('report', help='Reporting commands')
-
 @report_cli.command("week", help="Weekly report (week_start = Monday)")
 @click.argument("week_start")
 def report_week(week_start):
     rep = weekly_report(date.fromisoformat(week_start))
     _print_json(rep)
-
 app.cli.add_command(report_cli)
-# ----- END EXTRA COMMANDS -----
