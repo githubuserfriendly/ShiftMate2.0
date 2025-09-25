@@ -8,6 +8,8 @@ from werkzeug.datastructures import  FileStorage
 from App.database import init_db
 from App.config import load_config
 
+from App.api import api   # <-- import your new API blueprint
+
 
 from App.controllers import (
     setup_jwt,
@@ -37,5 +39,30 @@ def create_app(overrides={}):
     @jwt.unauthorized_loader
     def custom_unauthorized_response(error):
         return render_template('401.html', error=error), 401
+    app.app_context().push()
+    return app
+
+def create_app(overrides={}):
+    app = Flask(__name__, static_url_path='/static')
+    load_config(app, overrides)
+    CORS(app)
+    add_auth_context(app)
+
+    photos = UploadSet('photos', TEXT + DOCUMENTS + IMAGES)
+    configure_uploads(app, photos)
+
+    add_views(app)
+    init_db(app)
+    jwt = setup_jwt(app)
+    setup_admin(app)
+
+    # Register the API routes here
+    app.register_blueprint(api)
+
+    @jwt.invalid_token_loader
+    @jwt.unauthorized_loader
+    def custom_unauthorized_response(error):
+        return render_template('401.html', error=error), 401
+
     app.app_context().push()
     return app
