@@ -38,13 +38,12 @@ class User(db.Model):
 class Shift(db.Model):
     __tablename__ = 'shifts'
     id = db.Column(db.Integer, primary_key=True)
-    # One staff member per shift (simple case). Make this nullable if you want "unassigned" slots.
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     work_date = db.Column(db.Date, nullable=False, index=True)
     start_time = db.Column(db.Time, nullable=False)
     end_time = db.Column(db.Time, nullable=False)
-    role = db.Column(db.String(50))        # optional
-    location = db.Column(db.String(100))   # optional
+    role = db.Column(db.String(50))     
+    location = db.Column(db.String(100))  
 
     user = db.relationship('User', backref=db.backref('shifts', lazy=True))
 
@@ -58,7 +57,6 @@ class Shift(db.Model):
                 f"role={self.role!r} loc={self.location!r}>")
     
     def duration_hours(self):
-        # naive duration (same-day)
         dt_start = datetime.combine(self.work_date, self.start_time)
         dt_end   = datetime.combine(self.work_date, self.end_time)
         return max((dt_end - dt_start).total_seconds() / 3600.0, 0)

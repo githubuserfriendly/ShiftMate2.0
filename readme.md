@@ -1,10 +1,10 @@
 ## Welcome To ShiftMate!
   ![ShiftMate logo](App/static/Logo.png)
 
-ShiftMate is a lightweight staff scheduling and attendance toolkit with a simple CLI: 
-- admins create weekly rosters (Monday start, 9–5 or custom, roles/locations)
-- staff view the combined roster, clock in/out
-- weekly reports summarize hours and coverage
+ShiftMate is a  staff scheduling and attendance app with a simple CLI: 
+- Admins create weekly rosters (Monday start, 9–5 or custom, roles/locations)
+- Staff view the combined roster, clock in/out
+- Weekly reports summarize hours and coverage
 
 ## Install Dependencies
 

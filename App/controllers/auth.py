@@ -7,16 +7,12 @@ def login(username, password):
   result = db.session.execute(db.select(User).filter_by(username=username))
   user = result.scalar_one_or_none()
   if user and user.check_password(password):
-    # Store ONLY the user id as a string in JWT 'sub'
     return create_access_token(identity=str(user.id))
   return None
-
 
 def setup_jwt(app):
   jwt = JWTManager(app)
 
-  # Always store a string user id in the JWT identity (sub),
-  # whether a User object or a raw id is passed.
   @jwt.user_identity_loader
   def user_identity_lookup(identity):
     user_id = getattr(identity, "id", identity)
@@ -34,8 +30,6 @@ def setup_jwt(app):
 
   return jwt
 
-
-# Context processor to make 'is_authenticated' available to all templates
 def add_auth_context(app):
   @app.context_processor
   def inject_user():
