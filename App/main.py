@@ -17,12 +17,11 @@ from App.controllers import (
 )
 
 from App.views import views, setup_admin
-
-
+from App.views import register_views
+    
 
 def add_views(app):
-    for view in views:
-        app.register_blueprint(view)
+    register_views(app)
 
 def create_app(overrides={}):
     app = Flask(__name__, static_url_path='/static')
@@ -47,6 +46,8 @@ def create_app(overrides={}):
     load_config(app, overrides)
     CORS(app)
     add_auth_context(app)
+    
+    register_views(app)
 
     photos = UploadSet('photos', TEXT + DOCUMENTS + IMAGES)
     configure_uploads(app, photos)
