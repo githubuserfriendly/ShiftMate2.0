@@ -1,11 +1,10 @@
-from flask import Blueprint, render_template, jsonify, request, send_file, flash, redirect, url_for
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from App.controllers.report import weekly_report, get_all_reports, get_report_by_id
+from flask import Blueprint, render_template, request, send_file, flash, redirect, url_for
+from flask_jwt_extended import jwt_required
+from App.controllers.report import get_all_reports, get_report_by_id, generate_weekly_report
 from datetime import datetime, timedelta
 import io
 import csv
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
+
 
 report_views = Blueprint('report_views', __name__, template_folder='../templates')
 
@@ -21,7 +20,7 @@ def view_reports():
 @report_views.route('/reports/generate', methods=['POST'])
 @jwt_required()
 def generate_report():
-    # Example: auto-generate for the past week
+  
     end_date = datetime.utcnow().date()
     start_date = end_date - timedelta(days=7)
 
@@ -53,13 +52,20 @@ def download_report(report_id):
             download_name=f'report_{report.id}.csv'
         )
     elif fmt == 'pdf':
+        try:
+            from reportlab.lib.pagesizes import letter
+            from reportlab.pdfgen import canvas
+        except ModuleNotFoundError:
+            flash("PDF generation requires the 'reportlab' package; falling back to CSV.", "warning")
+            return redirect(url_for('report_views.download_report', report_id=report_id, format='csv'))
+
         output = io.BytesIO()
         pdf = canvas.Canvas(output, pagesize=letter)
-        pdf.drawString(100, 750, f"Weekly Report: {report.start_date} - {report.end_date}")
-        pdf.drawString(100, 730, f"Total Shifts: {report.total_shifts}")
-        pdf.drawString(100, 710, f"Total Hours: {report.total_hours}")
-        pdf.drawString(100, 690, f"Staff Attendance Rate: {report.attendance_rate}%")
-        pdf.drawString(100, 670, f"Overtime Hours: {report.overtime_hours}")
+        pdf.drawString(100, 750, f"Weekly Report: {report.period_start} - {report.period_end}")
+        pdf.drawString(100, 730, f"Total Shifts: {report.payload.get('total_shifts', 'N/A')}")
+        pdf.drawString(100, 710, f"Total Hours: {report.payload.get('total_hours', 'N/A')}")
+        pdf.drawString(100, 690, f"Staff Attendance Rate: {report.payload.get('attendance_rate', 'N/A')}")
+        pdf.drawString(100, 670, f"Overtime Hours: {report.payload.get('overtime_hours', 'N/A')}")
         pdf.save()
         output.seek(0)
         return send_file(output, mimetype='application/pdf',

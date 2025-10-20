@@ -5,10 +5,7 @@ from .shift import shift_views
 from .attendance import attendance_views  
 from .report import report_views
 from .admin import setup_admin     
-
-from App.database import init_db
-from flask import Flask     
-from App.views import views
+from flask import Flask
 
 _all_blueprints = [
     user_views,
@@ -19,12 +16,17 @@ _all_blueprints = [
     report_views,
 ]
 
-def register_views(app):
-    app = Flask(__name__)
-    app.config['SECRET_KEY'] = 'your_secret_key'
-    init_db(app) 
-        
-    for bp in views:
-        app.register_blueprint(bp)
 
-    setup_admin(app)   
+views = _all_blueprints
+
+__all__ = [
+    'user_views', 'index_views', 'auth_views', 'shift_views',
+    'attendance_views', 'report_views', 'setup_admin', 'views', 'register_views'
+]
+
+def register_views(app):
+  
+    app.config.setdefault('SECRET_KEY', 'your_secret_key')
+    for bp in _all_blueprints:
+        app.register_blueprint(bp)
+ 

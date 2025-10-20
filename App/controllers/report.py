@@ -1,5 +1,7 @@
 from App.models import Shift, Attendance, User
 from datetime import timedelta, date
+from App.models.report import Report
+from App.database import db
 
 def weekly_report(week_start: date):
     week_end = week_start + timedelta(days=6)
@@ -42,3 +44,38 @@ def weekly_report(week_start: date):
         u['worked_hours'] = round(u['worked_hours'], 2)
 
     return report
+
+
+def get_all_reports():
+    """Return all reports ordered by created_at desc."""
+    return Report.query.order_by(Report.created_at.desc()).all()
+
+
+def get_report_by_id(report_id: int):
+    return Report.query.get(report_id)
+
+
+def generate_weekly_report(start_date: date, end_date: date, generated_by_id: int = None):
+    """Compute the weekly payload and persist a Report row (unique by type+period).
+    Returns the Report instance.
+    """
+    period_start = start_date
+    period_end = end_date
+
+    payload = weekly_report(period_start)
+
+    rpt = (
+        Report.query.filter_by(report_type="weekly", period_start=period_start, period_end=period_end)
+        .first()
+    )
+    if rpt:
+        rpt.payload = payload
+        rpt.generated_by_id = generated_by_id
+        db.session.add(rpt)
+        db.session.commit()
+        return rpt
+
+    rpt = Report(report_type="weekly", period_start=period_start, period_end=period_end, payload=payload, generated_by_id=generated_by_id)
+    db.session.add(rpt)
+    db.session.commit()
+    return rpt
