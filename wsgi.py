@@ -1,5 +1,5 @@
 import click, pytest, sys, json
-from flask.cli import with_appcontext, AppGroup
+from flask.cli import AppGroup
 from datetime import datetime, date, time as dtime, timedelta
 from App.database import db, get_migrate
 from App.models import User, Shift, Attendance
@@ -10,14 +10,12 @@ from App.controllers import schedule_shift, schedule_week, get_roster, clock_in,
 app = create_app()
 migrate = get_migrate(app)
 
-# This command creates and initializes the database
 @app.cli.command("init", help="Creates and initializes the database")
 def init():
     initialize()
     print('Database Initialized!')
 
-# Groups: 
-# HOW TO USE GROUPS : flask <group> <command>
+
 user_cli = AppGroup('user', help='User object commands')
 test = AppGroup('test', help='Testing commands') 
 shift_cli = AppGroup('shift', help='Shift scheduling and roster commands')
@@ -28,8 +26,6 @@ report_cli = AppGroup('report', help='Reporting commands')
 User Commands
 '''
 
-# Creating a user:
-# This command will be : flask user create bob bobpass
 @user_cli.command("create", help="Creates a user")
 @click.argument("username", default="rob")
 @click.argument("password", default="robpass")
@@ -37,7 +33,7 @@ def create_user_command(username, password):
     create_user(username, password)
     print(f'{username} created!')
 
-# Generating List of all Users
+
 @user_cli.command("list", help="Lists users in the database")
 @click.argument("format", default="string")
 def list_user_command(format):
@@ -228,7 +224,7 @@ def att_status(username, shift_id):
         print("No attendance record found.")
 app.cli.add_command(att_cli)
 
-# ---- REPORT COMMANDS (prettier output) ----
+# ---- REPORT COMMANDS  ----
 @report_cli.command("week", help="Weekly report (week_start = Monday)")
 @click.argument("week_start")
 def report_week(week_start):
